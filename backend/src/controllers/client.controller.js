@@ -1,16 +1,27 @@
 import { v4 as uuidv4 } from 'uuid';
-import PurchaseRecord from '../models/PurchaseRecord.model.js';
-import GSTR2BRecord from '../models/GSTR2B.model.js';
-import ReconciliationResult from '../models/ReconciliationResult.model.js';
+import { getPurchaseRecordModel } from '../models/PurchaseRecord.model.js';
+import { getGSTR2BRecordModel } from '../models/GSTR2B.model.js';
+import { getReconciliationResultModel } from '../models/ReconciliationResult.model.js';
 import { parseFile, mapToPurchase, deleteFile, generateCSV } from '../utils/fileParser.js';
 import { reconcileRecords } from '../services/reconciliation.service.js';
 import { AppError } from '../middleware/error.middleware.js';
 
-// @desc    Upload Purchase CSV/Excel
-// @route   POST /api/client/upload-purchase
-// @access  Client
 export const uploadPurchase = async (req, res, next) => {
   try {
+    const PurchaseRecord = getPurchaseRecordModel();
+    const GSTR2BRecord = getGSTR2BRecordModel();
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Client upload req.body:', req.body);
+      console.log('Client upload req.file:', req.file ? {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      } : null);
+    }
+
     if (!req.file) {
       return next(new AppError('Please upload a CSV or Excel file', 400));
     }
@@ -20,7 +31,6 @@ export const uploadPurchase = async (req, res, next) => {
       return next(new AppError('GSTR2B upload ID is required for reconciliation', 400));
     }
 
-    // Check if GSTR2B batch exists
     const gstr2bExists = await GSTR2BRecord.findOne({ uploadId: gstr2bUploadId });
     if (!gstr2bExists) {
       return next(new AppError('GSTR2B upload batch not found. Please ask admin to upload GSTR2B data first.', 404));
@@ -58,9 +68,7 @@ export const uploadPurchase = async (req, res, next) => {
     }
 
     await PurchaseRecord.insertMany(records, { ordered: false });
-    deleteFile(filePath);
 
-    // Auto-trigger reconciliation
     const gstin = records[0]?.gstin || '';
     const reconciliation = await reconcileRecords(uploadId, gstr2bUploadId, req.user.id, gstin);
 
@@ -80,11 +88,9 @@ export const uploadPurchase = async (req, res, next) => {
   }
 };
 
-// @desc    Get client's reconciliation results
-// @route   GET /api/client/results
-// @access  Client
 export const getMyResults = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const results = await ReconciliationResult.find({
       initiatedBy: req.user.id,
       status: 'completed'
@@ -96,11 +102,9 @@ export const getMyResults = async (req, res, next) => {
   }
 };
 
-// @desc    Get a single reconciliation result by ID
-// @route   GET /api/client/results/:reconciliationId
-// @access  Client
 export const getResultById = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const result = await ReconciliationResult.findOne({
       reconciliationId: req.params.reconciliationId,
       initiatedBy: req.user.id
@@ -120,11 +124,9 @@ export const getResultById = async (req, res, next) => {
   }
 };
 
-// @desc    Download unmatched records as CSV
-// @route   GET /api/client/results/:reconciliationId/download
-// @access  Client
 export const downloadUnmatched = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const result = await ReconciliationResult.findOne({
       reconciliationId: req.params.reconciliationId
     })
@@ -138,12 +140,12 @@ export const downloadUnmatched = async (req, res, next) => {
     const rows = result.unmatchedRecords.map((r, idx) => ({
       'Sr.No': idx + 1,
       'Invoice Number': r.invoiceNumber || '',
-      'GSTIN': r.gstin || '',
-      'Reason': r.reason?.replace(/_/g, ' ').toUpperCase() || '',
+      GSTIN: r.gstin || '',
+      Reason: r.reason?.replace(/_/g, ' ').toUpperCase() || '',
       'Purchase Amount': r.purchaseAmount ?? '',
       'GSTR2B Amount': r.gstr2bAmount ?? '',
-      'Difference': r.difference ?? '',
-      'Details': r.details || ''
+      Difference: r.difference ?? '',
+      Details: r.details || ''
     }));
 
     const csv = generateCSV(rows);
@@ -155,11 +157,9 @@ export const downloadUnmatched = async (req, res, next) => {
   }
 };
 
-// @desc    Get available GSTR2B batches for selection
-// @route   GET /api/client/gstr2b-batches
-// @access  Client
 export const getGSTR2BBatches = async (req, res, next) => {
   try {
+    const GSTR2BRecord = getGSTR2BRecordModel();
     const batches = await GSTR2BRecord.aggregate([
       {
         $group: {

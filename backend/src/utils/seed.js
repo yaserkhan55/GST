@@ -1,8 +1,8 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import User from '../models/User.model.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import connectDB, { getActiveConnection, getActiveDbLabel } from '../config/database.js';
+import { getUserModel } from '../models/User.model.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,28 +38,36 @@ const seedUsers = [
 
 const seed = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    await connectDB();
+    const User = getUserModel();
+    console.log(`Connected to ${getActiveDbLabel()} MongoDB`);
 
     await User.deleteMany({});
-    console.log('🗑️  Cleared existing users');
+    console.log('Cleared existing users');
 
     for (const userData of seedUsers) {
       const user = new User(userData);
       await user.save();
-      console.log(`✅ Created ${userData.role}: ${userData.email}`);
+      console.log(`Created ${userData.role}: ${userData.email}`);
     }
 
-    console.log('\n🌱 Seed complete! Login credentials:');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    seedUsers.forEach(u => {
-      console.log(`  ${u.role.toUpperCase().padEnd(8)} | ${u.email} | ${u.password}`);
+    console.log('\nSeed complete. Login credentials:');
+    seedUsers.forEach((user) => {
+      console.log(`${user.role.toUpperCase().padEnd(8)} | ${user.email} | ${user.password}`);
     });
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
+    await getActiveConnection().close();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seed failed:', error.message);
+    console.error('Seed failed:', error.message);
+
+    try {
+      const connection = getActiveConnection();
+      await connection.close();
+    } catch {
+      // No active connection to close.
+    }
+
     process.exit(1);
   }
 };

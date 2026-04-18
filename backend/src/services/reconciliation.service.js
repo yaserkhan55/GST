@@ -1,24 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
-import GSTR2BRecord from '../models/GSTR2B.model.js';
-import PurchaseRecord from '../models/PurchaseRecord.model.js';
-import ReconciliationResult from '../models/ReconciliationResult.model.js';
+import { getGSTR2BRecordModel } from '../models/GSTR2B.model.js';
+import { getPurchaseRecordModel } from '../models/PurchaseRecord.model.js';
+import { getReconciliationResultModel } from '../models/ReconciliationResult.model.js';
 
 const getMatchKey = (record) => {
   const partyGstin = record.supplierGstin || record.gstin || '';
   return `${partyGstin}::${record.invoiceNumber || ''}`;
 };
 
-const AMOUNT_TOLERANCE = 1; // ₹1 tolerance for floating point differences
+const AMOUNT_TOLERANCE = 1;
 
-/**
- * Core reconciliation engine
- * Matches Purchase records against GSTR2B records on GSTIN + Invoice Number
- */
 export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId, gstin) => {
+  const PurchaseRecord = getPurchaseRecordModel();
+  const GSTR2BRecord = getGSTR2BRecordModel();
+  const ReconciliationResult = getReconciliationResultModel();
   const startTime = Date.now();
   const reconciliationId = uuidv4();
 
-  // Create initial result document (processing state)
   const result = await ReconciliationResult.create({
     reconciliationId,
     initiatedBy: userId,
@@ -29,12 +27,10 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
   });
 
   try {
-    // Fetch all purchase records for this upload
     const purchaseRecords = await PurchaseRecord.find({ uploadId: purchaseUploadId });
-
-    // Build a lookup map from GSTR2B records keyed by supplier/party GSTIN + invoice number.
     const gstr2bRecords = await GSTR2BRecord.find({ uploadId: gstr2bUploadId });
     const gstr2bMap = new Map();
+
     for (const rec of gstr2bRecords) {
       const key = getMatchKey(rec);
       gstr2bMap.set(key, rec);
@@ -48,7 +44,6 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
       const gstr2bMatch = gstr2bMap.get(key);
 
       if (!gstr2bMatch) {
-        // Invoice not found in GSTR2B
         unmatchedRecords.push({
           purchaseRecord: purchase._id,
           gstr2bRecord: null,
@@ -68,7 +63,6 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
           Math.abs(purchase.sgst - gstr2bMatch.sgst);
 
         if (amountDiff <= AMOUNT_TOLERANCE && taxDiff <= AMOUNT_TOLERANCE) {
-          // Fully matched
           matchedRecords.push({
             purchaseRecord: purchase._id,
             gstr2bRecord: gstr2bMatch._id,
@@ -77,7 +71,7 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
             purchaseAmount: purchase.totalAmount,
             gstr2bAmount: gstr2bMatch.totalAmount
           });
-          // Mark as processed
+
           await PurchaseRecord.findByIdAndUpdate(purchase._id, { status: 'processed' });
         } else if (amountDiff > AMOUNT_TOLERANCE) {
           unmatchedRecords.push({
@@ -89,7 +83,7 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
             purchaseAmount: purchase.totalAmount,
             gstr2bAmount: gstr2bMatch.totalAmount,
             difference: amountDiff,
-            details: `Invoice amount mismatch. Purchase: ₹${purchase.totalAmount.toFixed(2)}, GSTR2B: ₹${gstr2bMatch.totalAmount.toFixed(2)}, Diff: ₹${amountDiff.toFixed(2)}`
+            details: `Invoice amount mismatch. Purchase: Rs ${purchase.totalAmount.toFixed(2)}, GSTR2B: Rs ${gstr2bMatch.totalAmount.toFixed(2)}, Diff: Rs ${amountDiff.toFixed(2)}`
           });
         } else {
           unmatchedRecords.push({
@@ -101,15 +95,14 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
             purchaseAmount: purchase.totalAmount,
             gstr2bAmount: gstr2bMatch.totalAmount,
             difference: taxDiff,
-            details: `Tax amount mismatch. Total tax diff: ₹${taxDiff.toFixed(2)}`
+            details: `Tax amount mismatch. Total tax diff: Rs ${taxDiff.toFixed(2)}`
           });
         }
-        // Remove matched GSTR2B entry to track extras
+
         gstr2bMap.delete(key);
       }
     }
 
-    // Any remaining GSTR2B records not found in purchase = missing_in_purchase
     for (const [, gstr2bRec] of gstr2bMap) {
       unmatchedRecords.push({
         purchaseRecord: null,
@@ -130,7 +123,6 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
     const unmatchedCount = unmatchedRecords.length;
     const matchPercentage = totalPurchase > 0 ? ((matchedCount / totalPurchase) * 100).toFixed(2) : 0;
 
-    // Update result document with final data
     await ReconciliationResult.findByIdAndUpdate(result._id, {
       status: 'completed',
       summary: {
@@ -148,7 +140,6 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
     });
 
     return { reconciliationId, status: 'completed', matchedCount, unmatchedCount };
-
   } catch (error) {
     await ReconciliationResult.findByIdAndUpdate(result._id, {
       status: 'failed',

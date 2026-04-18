@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
+import { getActiveConnection } from '../config/database.js';
 
-const gstr2bRecordSchema = new mongoose.Schema({
+export const gstr2bRecordSchema = new mongoose.Schema({
   uploadId: {
     type: String,
     required: true,
@@ -91,9 +92,8 @@ const gstr2bRecordSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index for fast reconciliation lookup
 gstr2bRecordSchema.index({ gstin: 1, invoiceNumber: 1 });
 gstr2bRecordSchema.index({ uploadId: 1, gstin: 1 });
 
-const GSTR2BRecord = mongoose.model('GSTR2BRecord', gstr2bRecordSchema);
-export default GSTR2BRecord;
+export const getGSTR2BRecordModel = (connection = getActiveConnection()) =>
+  connection.models.GSTR2BRecord || connection.model('GSTR2BRecord', gstr2bRecordSchema);

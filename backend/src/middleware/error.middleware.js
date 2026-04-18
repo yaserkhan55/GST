@@ -32,6 +32,11 @@ export const errorHandler = (err, req, res, next) => {
     statusCode = 400;
   }
 
+  if (err.message?.includes('Boundary not found')) {
+    message = 'Invalid multipart form data. Send a FormData payload and let the browser set the multipart boundary.';
+    statusCode = 400;
+  }
+
   res.status(statusCode).json({
     success: false,
     message,

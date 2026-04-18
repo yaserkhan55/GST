@@ -1,11 +1,9 @@
-import User from '../models/User.model.js';
+import { getUserModel } from '../models/User.model.js';
 import { AppError } from '../middleware/error.middleware.js';
 
-// @desc    Register new user
-// @route   POST /api/auth/register
-// @access  Public
 export const register = async (req, res, next) => {
   try {
+    const User = getUserModel();
     const {
       name,
       email,
@@ -33,7 +31,6 @@ export const register = async (req, res, next) => {
       return next(new AppError('Email already registered', 400));
     }
 
-    // Public registration should only create client accounts.
     const safeRole = 'client';
 
     const user = await User.create({
@@ -67,11 +64,9 @@ export const register = async (req, res, next) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
 export const login = async (req, res, next) => {
   try {
+    const User = getUserModel();
     const email = req.body.email?.trim().toLowerCase();
     const { password } = req.body;
 
@@ -120,11 +115,9 @@ export const login = async (req, res, next) => {
   }
 };
 
-// @desc    Get current user profile
-// @route   GET /api/auth/me
-// @access  Private
 export const getMe = async (req, res, next) => {
   try {
+    const User = getUserModel();
     const user = await User.findById(req.user.id);
     res.status(200).json({ success: true, user });
   } catch (error) {
@@ -132,11 +125,9 @@ export const getMe = async (req, res, next) => {
   }
 };
 
-// @desc    Update profile
-// @route   PUT /api/auth/me
-// @access  Private
 export const updateMe = async (req, res, next) => {
   try {
+    const User = getUserModel();
     const { name, company, gstin } = req.body;
     const user = await User.findByIdAndUpdate(
       req.user.id,

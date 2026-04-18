@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
+import { getActiveConnection } from '../config/database.js';
 
-const reconciliationResultSchema = new mongoose.Schema({
+export const reconciliationResultSchema = new mongoose.Schema({
   reconciliationId: {
     type: String,
     required: true,
@@ -81,7 +82,7 @@ const reconciliationResultSchema = new mongoose.Schema({
     details: String
   }],
   processingTime: {
-    type: Number // milliseconds
+    type: Number
   },
   errorMessage: {
     type: String
@@ -90,5 +91,5 @@ const reconciliationResultSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const ReconciliationResult = mongoose.model('ReconciliationResult', reconciliationResultSchema);
-export default ReconciliationResult;
+export const getReconciliationResultModel = (connection = getActiveConnection()) =>
+  connection.models.ReconciliationResult || connection.model('ReconciliationResult', reconciliationResultSchema);

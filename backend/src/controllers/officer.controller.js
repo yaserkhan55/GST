@@ -1,12 +1,10 @@
-import ReconciliationResult from '../models/ReconciliationResult.model.js';
+import { getReconciliationResultModel } from '../models/ReconciliationResult.model.js';
 import { AppError } from '../middleware/error.middleware.js';
 import { generateCSV } from '../utils/fileParser.js';
 
-// @desc    Get all matched records
-// @route   GET /api/officer/matched
-// @access  Officer
 export const getMatchedRecords = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const { gstin, page = 1, limit = 50, search } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -19,7 +17,6 @@ export const getMatchedRecords = async (req, res, next) => {
       .populate('initiatedBy', 'name email company')
       .lean();
 
-    // Flatten matched records across all reconciliations
     let allMatched = [];
     for (const result of results) {
       for (const rec of result.matchedRecords || []) {
@@ -52,11 +49,9 @@ export const getMatchedRecords = async (req, res, next) => {
   }
 };
 
-// @desc    Get all results overview
-// @route   GET /api/officer/reconciliations
-// @access  Officer
 export const getAllReconciliations = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const { status, gstin, page = 1, limit = 20 } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -85,11 +80,9 @@ export const getAllReconciliations = async (req, res, next) => {
   }
 };
 
-// @desc    Get single reconciliation detail
-// @route   GET /api/officer/reconciliations/:id
-// @access  Officer
 export const getReconciliationDetail = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const result = await ReconciliationResult.findOne({
       reconciliationId: req.params.id
     })
@@ -109,11 +102,9 @@ export const getReconciliationDetail = async (req, res, next) => {
   }
 };
 
-// @desc    Download full matched report as CSV
-// @route   GET /api/officer/matched/download
-// @access  Officer
 export const downloadMatchedReport = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const results = await ReconciliationResult.find({ status: 'completed' })
       .populate('initiatedBy', 'name email')
       .lean();
@@ -126,10 +117,10 @@ export const downloadMatchedReport = async (req, res, next) => {
           'Sr.No': srNo++,
           'Reconciliation ID': result.reconciliationId,
           'Invoice Number': rec.invoiceNumber || '',
-          'GSTIN': rec.gstin || '',
+          GSTIN: rec.gstin || '',
           'Purchase Amount': rec.purchaseAmount ?? '',
           'GSTR2B Amount': rec.gstr2bAmount ?? '',
-          'Status': 'MATCHED',
+          Status: 'MATCHED',
           'Matched At': rec.matchedAt ? new Date(rec.matchedAt).toLocaleDateString() : '',
           'Initiated By': result.initiatedBy?.name || ''
         });
@@ -138,18 +129,16 @@ export const downloadMatchedReport = async (req, res, next) => {
 
     const csv = generateCSV(rows);
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="matched_report.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename=\"matched_report.csv\"');
     res.send(csv);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Officer dashboard stats
-// @route   GET /api/officer/stats
-// @access  Officer
 export const getOfficerStats = async (req, res, next) => {
   try {
+    const ReconciliationResult = getReconciliationResultModel();
     const [total, completed, processing, failed] = await Promise.all([
       ReconciliationResult.countDocuments(),
       ReconciliationResult.countDocuments({ status: 'completed' }),

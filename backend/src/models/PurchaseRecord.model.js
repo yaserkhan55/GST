@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
+import { getActiveConnection } from '../config/database.js';
 
-const purchaseRecordSchema = new mongoose.Schema({
+export const purchaseRecordSchema = new mongoose.Schema({
   uploadId: {
     type: String,
     required: true,
@@ -83,9 +84,8 @@ const purchaseRecordSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index for fast reconciliation lookup
 purchaseRecordSchema.index({ gstin: 1, invoiceNumber: 1 });
 purchaseRecordSchema.index({ uploadId: 1, uploadedBy: 1 });
 
-const PurchaseRecord = mongoose.model('PurchaseRecord', purchaseRecordSchema);
-export default PurchaseRecord;
+export const getPurchaseRecordModel = (connection = getActiveConnection()) =>
+  connection.models.PurchaseRecord || connection.model('PurchaseRecord', purchaseRecordSchema);
