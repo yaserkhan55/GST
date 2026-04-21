@@ -1,25 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import {
   CloudArrowUpIcon, UsersIcon, DocumentCheckIcon,
   ChartBarIcon, TrashIcon, ArrowPathIcon,
-  CheckCircleIcon, ExclamationCircleIcon, ClockIcon
+  DocumentArrowUpIcon, UserGroupIcon, Squares2X2Icon
 } from '@heroicons/react/24/outline';
 
 const StatCard = ({ icon: Icon, label, value, color, delay }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-    transition={{ delay }} className="stat-card"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay }}
+    className="card group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden"
   >
-    <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center`}>
-      <Icon className="w-5 h-5 text-white" />
+    <div className={`absolute -right-4 -bottom-4 w-32 h-32 opacity-5 scale-150 transition-transform group-hover:rotate-12 ${color}`}>
+      <Icon />
     </div>
-    <div>
-      <p className="text-2xl font-display font-bold text-slate-900 dark:text-white">{value ?? '—'}</p>
-      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+    <div className="flex items-center gap-4 relative z-10">
+      <div className={`p-4 rounded-2xl ${color.replace('text-', 'bg-').replace('-500', '-100')} ${color.replace('text-', 'dark:bg-').replace('-500', '-900/40')}`}>
+        <Icon className={`w-8 h-8 ${color}`} />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{value ?? '—'}</p>
+      </div>
     </div>
   </motion.div>
 );
@@ -43,7 +50,7 @@ export default function AdminDashboard() {
       setHistory(histRes.data.data || []);
       setUsers(usersRes.data.data || []);
     } catch (err) {
-      toast.error('Failed to load dashboard data');
+      toast.error('Failed to fetch data');
     } finally {
       setLoadingHistory(false);
     }
@@ -65,206 +72,191 @@ export default function AdminDashboard() {
       const res = await api.post('/admin/upload-gstr2b', formData, {
         onUploadProgress: (e) => {
           if (!e.total) return;
-          setUploadProgress(Math.round((e.loaded * 90) / e.total));
+          setUploadProgress(Math.round((e.loaded * 100) / e.total));
         }
       });
-      setUploadProgress(100);
-      toast.success(`✅ ${res.data.totalRecords} GSTR2B records uploaded! Upload ID: ${res.data.uploadId.slice(0, 8)}...`);
+      toast.success('GSTR2B uploaded successfully');
       await fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Upload failed');
+      toast.error(err.response?.data?.message || 'Failed to upload');
     } finally {
-      setTimeout(() => { setUploading(false); setUploadProgress(0); }, 1500);
+      setUploading(false);
+      setUploadProgress(0);
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'text/csv': ['.csv'], 'application/vnd.ms-excel': ['.xls'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+    accept: { 'text/csv': ['.csv'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
     maxFiles: 1,
     disabled: uploading
   });
 
   const deleteBatch = async (uploadId) => {
-    if (!confirm('Delete this GSTR2B batch? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this batch?')) return;
     try {
       await api.delete(`/admin/gstr2b/${uploadId}`);
-      toast.success('Batch deleted successfully');
+      toast.success('Batch deleted');
       await fetchData();
-    } catch {
-      toast.error('Failed to delete batch');
+    } catch (err) {
+      toast.error('Failed to delete');
     }
   };
 
-  const roleColor = { admin: 'bg-violet-500', client: 'bg-brand-500', officer: 'bg-emerald-500' };
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="page-header">
-        <h1 className="page-title">Admin Dashboard</h1>
-        <p className="page-subtitle">Manage GSTR2B uploads, users, and system overview</p>
+    <div className="space-y-8 pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-3xl font-extrabold text-slate-900 dark:text-white">Admin Overview</h2>
+          <p className="text-slate-500 mt-1">Manage system data and master GSTR2B records</p>
+        </div>
+        <button onClick={fetchData} className="btn-secondary w-fit flex items-center gap-2">
+          <ArrowPathIcon className="w-5 h-5" />
+          Refres Data
+        </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={UsersIcon} label="Total Users" value={stats?.totalUsers} color="bg-violet-500" delay={0} />
-        <StatCard icon={DocumentCheckIcon} label="GSTR2B Records" value={stats?.totalGSTR2BRecords?.toLocaleString()} color="bg-brand-500" delay={0.1} />
-        <StatCard icon={CloudArrowUpIcon} label="Purchase Records" value={stats?.totalPurchaseRecords?.toLocaleString()} color="bg-emerald-500" delay={0.2} />
-        <StatCard icon={ChartBarIcon} label="Reconciliations" value={stats?.totalReconciliations} color="bg-amber-500" delay={0.3} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard icon={UsersIcon} label="Total Users" value={stats?.totalUsers} color="text-brand-500" delay={0} />
+        <StatCard icon={DocumentCheckIcon} label="Master GSTR2B" value={stats?.totalGSTR2BRecords?.toLocaleString()} color="text-emerald-500" delay={0.1} />
+        <StatCard icon={CloudArrowUpIcon} label="Purchase Records" value={stats?.totalPurchaseRecords?.toLocaleString()} color="text-indigo-500" delay={0.2} />
+        <StatCard icon={ChartBarIcon} label="Reconciliations" value={stats?.totalReconciliations} color="text-purple-500" delay={0.3} />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Upload GSTR2B */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="card p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center">
-              <CloudArrowUpIcon className="w-5 h-5 text-white" />
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Upload Card */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="card h-fit">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <CloudArrowUpIcon className="w-6 h-6 text-brand-500" />
+              Upload GSTR2B Master
+            </h3>
+            <div
+              {...getRootProps()}
+              className={`drop-zone py-12 transition-all ${isDragActive ? 'bg-brand-50 dark:bg-brand-900/10 border-brand-500' : ''} ${uploading ? 'opacity-50' : ''}`}
+            >
+              <input {...getInputProps()} />
+              <DocumentArrowUpIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                {uploading ? `Uploading... ${uploadProgress}%` : 'Drop GSTR2B CSV/Excel here'}
+              </p>
             </div>
-            <div>
-              <h2 className="text-base font-display font-semibold text-slate-900 dark:text-white">Upload GSTR2B Data</h2>
-              <p className="text-xs text-slate-500">CSV or Excel files up to 10MB</p>
-            </div>
-          </div>
-
-          <div
-            {...getRootProps()}
-            className={`drop-zone ${isDragActive ? 'drop-zone-active' : ''} ${uploading ? 'opacity-60 cursor-wait' : ''}`}
-          >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-3">
-              <div className={`w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center ${isDragActive ? 'animate-bounce' : ''}`}>
-                <CloudArrowUpIcon className="w-7 h-7 text-brand-500" />
-              </div>
-              {isDragActive ? (
-                <p className="font-semibold text-brand-600 dark:text-brand-400">Drop file here!</p>
-              ) : (
-                <>
-                  <p className="font-semibold text-slate-700 dark:text-slate-300">Drag & drop GSTR2B file</p>
-                  <p className="text-sm text-slate-400">or click to browse • CSV, XLS, XLSX</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {uploading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-              <div className="flex justify-between text-xs text-slate-500 mb-1">
-                <span>Uploading & Processing...</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <div className="progress-bar">
-                <motion.div
-                  className="progress-fill"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${uploadProgress}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-            </motion.div>
-          )}
-
-          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-              📋 Required columns: GSTIN, Invoice Number, Taxable Amount, IGST, CGST, SGST, Total Amount
-            </p>
-          </div>
-        </motion.div>
-
-        {/* User Management */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="card p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center">
-                <UsersIcon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-base font-display font-semibold text-slate-900 dark:text-white">All Users</h2>
-                <p className="text-xs text-slate-500">{users.length} registered accounts</p>
-              </div>
-            </div>
-            <button onClick={fetchData} className="btn-ghost p-2 rounded-lg">
-              <ArrowPathIcon className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {users.map((user) => (
-              <div key={user._id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <div className={`w-8 h-8 rounded-full ${roleColor[user.role] || 'bg-slate-400'} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                  {user.name?.[0]?.toUpperCase()}
+            
+            {uploading && (
+              <div className="mt-4">
+                <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-brand-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{user.name}</p>
-                  <p className="text-xs text-slate-400 truncate">{user.email}</p>
-                </div>
-                <span className={`badge ${user.role === 'admin' ? 'badge-info' : user.role === 'officer' ? 'badge-success' : 'badge-warning'}`}>
-                  {user.role}
-                </span>
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${user.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
               </div>
-            ))}
-            {users.length === 0 && (
-              <div className="text-center py-8 text-slate-400 text-sm">No users found</div>
             )}
           </div>
-        </motion.div>
-      </div>
 
-      {/* Upload History */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="card">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <h2 className="text-base font-display font-semibold text-slate-900 dark:text-white">GSTR2B Upload History</h2>
-            <p className="text-xs text-slate-500 mt-0.5">All uploaded GSTR2B data batches</p>
+          <div className="card bg-brand-500 text-white p-8">
+             <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                   <Squares2X2Icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold">Quick Actions</h3>
+             </div>
+             <div className="space-y-3">
+                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all font-semibold flex items-center gap-3 px-4">
+                   <UserGroupIcon className="w-5 h-5" />
+                   Generate User Report
+                </button>
+                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all font-semibold flex items-center gap-3 px-4">
+                   <DocumentCheckIcon className="w-5 h-5" />
+                   Cleanup Orphan Records
+                </button>
+             </div>
           </div>
-          <button onClick={fetchData} className="btn-ghost p-2 rounded-lg">
-            <ArrowPathIcon className="w-4 h-4" />
-          </button>
         </div>
 
-        <div className="overflow-x-auto">
-          {loadingHistory ? (
-            <div className="p-6 space-y-3">
-              {[1,2,3].map(i => <div key={i} className="skeleton h-12 rounded-xl" />)}
-            </div>
-          ) : history.length === 0 ? (
-            <div className="p-12 text-center">
-              <CloudArrowUpIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-              <p className="text-slate-500 dark:text-slate-400 text-sm">No GSTR2B uploads yet. Upload your first file above.</p>
-            </div>
-          ) : (
+        {/* History Table */}
+        <div className="lg:col-span-2 card p-0 overflow-hidden">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <h3 className="text-lg font-bold">GSTR2B Upload History</h3>
+            <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-bold text-slate-500">{history.length} batches</span>
+          </div>
+          <div className="overflow-x-auto">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Upload ID</th>
+                  <th>Batch ID</th>
                   <th>Records</th>
-                  <th>Total Amount</th>
-                  <th>Return Period</th>
-                  <th>Uploaded</th>
-                  <th>Actions</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th className="w-20">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {history.map((h) => (
-                  <tr key={h.uploadId}>
-                    <td><code className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono">{h.uploadId?.slice(0, 12)}...</code></td>
-                    <td><span className="badge badge-info">{h.totalRecords?.toLocaleString()}</span></td>
-                    <td className="font-medium">₹{h.totalAmount?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                    <td>{h.returnPeriod || '—'}</td>
-                    <td className="text-slate-400 text-xs">{h.createdAt ? new Date(h.createdAt).toLocaleString() : '—'}</td>
-                    <td>
-                      <button onClick={() => deleteBatch(h.uploadId)} className="btn-ghost p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                <AnimatePresence>
+                  {history.map((h, idx) => (
+                    <motion.tr
+                      key={h.uploadId}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <td className="font-mono text-xs">{h.uploadId}</td>
+                      <td className="font-bold">{h.totalRecords?.toLocaleString()}</td>
+                      <td className="font-bold text-brand-600 dark:text-brand-400">₹{h.totalAmount?.toLocaleString('en-IN')}</td>
+                      <td className="text-slate-500 whitespace-nowrap">{h.createdAt ? new Date(h.createdAt).toLocaleDateString() : '—'}</td>
+                      <td>
+                        <button
+                          onClick={() => deleteBatch(h.uploadId)}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-all"
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                  {history.length === 0 && !loadingHistory && (
+                    <tr>
+                      <td colSpan="5" className="text-center py-12 text-slate-400 italic">No upload history found</td>
+                    </tr>
+                  )}
+                </AnimatePresence>
               </tbody>
             </table>
-          )}
+          </div>
         </div>
-      </motion.div>
+      </div>
+      
+      {/* Users Table */}
+      <div className="card p-0 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+           <h3 className="text-lg font-bold">Recently Registered Users</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>User Name</th>
+                <th>Email Address</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.slice(0, 10).map((user) => (
+                <tr key={user._id}>
+                  <td className="font-bold">{user.name}</td>
+                  <td>{user.email}</td>
+                  <td>
+                    <span className={`badge ${user.role === 'admin' ? 'badge-danger' : user.role === 'officer' ? 'badge-info' : 'badge-success'}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td><span className="flex items-center gap-2"><div className="status-dot bg-emerald-500 animate-pulse" />Active</span></td>
+                  <td className="text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

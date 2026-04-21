@@ -56,12 +56,30 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/client', clientRoutes);
 app.use('/api/officer', officerRoutes);
 
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`
+// Deployment: Serve frontend static files
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(distPath));
+
+  app.get('*', (req, res) => {
+    // If it's an API route that reached here, it's 404
+    if (req.originalUrl.startsWith('/api')) {
+      return res.status(404).json({
+        success: false,
+        message: `API Route ${req.originalUrl} not found`
+      });
+    }
+    // Otherwise serve frontend index.html
+    res.sendFile(path.join(distPath, 'index.html'));
   });
-});
+} else {
+  app.use('*', (req, res) => {
+    res.status(404).json({
+      success: false,
+      message: `Route ${req.originalUrl} not found`
+    });
+  });
+}
 
 app.use(errorHandler);
 

@@ -53,6 +53,18 @@ export const reconciliationResultSchema = new mongoose.Schema({
     gstin: String,
     purchaseAmount: Number,
     gstr2bAmount: Number,
+    purchaseTaxDetails: {
+      igst: Number,
+      cgst: Number,
+      sgst: Number,
+      cess: Number
+    },
+    gstr2bTaxDetails: {
+      igst: Number,
+      cgst: Number,
+      sgst: Number,
+      cess: Number
+    },
     matchedAt: { type: Date, default: Date.now }
   }],
   unmatchedRecords: [{
@@ -78,6 +90,18 @@ export const reconciliationResultSchema = new mongoose.Schema({
     },
     purchaseAmount: Number,
     gstr2bAmount: Number,
+    purchaseTaxDetails: {
+      igst: Number,
+      cgst: Number,
+      sgst: Number,
+      cess: Number
+    },
+    gstr2bTaxDetails: {
+      igst: Number,
+      cgst: Number,
+      sgst: Number,
+      cess: Number
+    },
     difference: Number,
     details: String
   }],

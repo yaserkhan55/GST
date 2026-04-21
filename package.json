@@ -6,6 +6,11 @@
     "backend": "cd backend && npm run dev",
     "frontend": "cd frontend && npm run dev",
     "seed": "cd backend && npm run seed",
-    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "echo 'Backend build not required (Node.js)'",
+    "build": "npm run build:frontend",
+    "start": "cd backend && NODE_ENV=production node src/server.js",
+    "deploy:prepare": "npm run install:all && npm run build"
   }
 }

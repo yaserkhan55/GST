@@ -128,10 +128,10 @@ export const getMe = async (req, res, next) => {
 export const updateMe = async (req, res, next) => {
   try {
     const User = getUserModel();
-    const { name, company, gstin } = req.body;
+    const { name, company, gstin, legalName, tradeName, address, city, state } = req.body;
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { name, company, gstin },
+      { name, company, gstin, legalName, tradeName, address, city, state },
       { new: true, runValidators: true }
     );
     res.status(200).json({ success: true, user });

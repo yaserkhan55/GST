@@ -52,6 +52,13 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
           reason: 'missing_in_gstr2b',
           purchaseAmount: purchase.totalAmount,
           gstr2bAmount: null,
+          purchaseTaxDetails: {
+            igst: purchase.igst || 0,
+            cgst: purchase.cgst || 0,
+            sgst: purchase.sgst || 0,
+            cess: purchase.cess || 0
+          },
+          gstr2bTaxDetails: null,
           difference: purchase.totalAmount,
           details: `Invoice ${purchase.invoiceNumber} not found in GSTR2B data`
         });
@@ -69,7 +76,19 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
             invoiceNumber: purchase.invoiceNumber,
             gstin: purchase.gstin,
             purchaseAmount: purchase.totalAmount,
-            gstr2bAmount: gstr2bMatch.totalAmount
+            gstr2bAmount: gstr2bMatch.totalAmount,
+            purchaseTaxDetails: {
+              igst: purchase.igst || 0,
+              cgst: purchase.cgst || 0,
+              sgst: purchase.sgst || 0,
+              cess: purchase.cess || 0
+            },
+            gstr2bTaxDetails: {
+              igst: gstr2bMatch.igst || 0,
+              cgst: gstr2bMatch.cgst || 0,
+              sgst: gstr2bMatch.sgst || 0,
+              cess: gstr2bMatch.cess || 0
+            }
           });
 
           await PurchaseRecord.findByIdAndUpdate(purchase._id, { status: 'processed' });
@@ -82,6 +101,18 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
             reason: 'amount_mismatch',
             purchaseAmount: purchase.totalAmount,
             gstr2bAmount: gstr2bMatch.totalAmount,
+            purchaseTaxDetails: {
+              igst: purchase.igst || 0,
+              cgst: purchase.cgst || 0,
+              sgst: purchase.sgst || 0,
+              cess: purchase.cess || 0
+            },
+            gstr2bTaxDetails: {
+              igst: gstr2bMatch.igst || 0,
+              cgst: gstr2bMatch.cgst || 0,
+              sgst: gstr2bMatch.sgst || 0,
+              cess: gstr2bMatch.cess || 0
+            },
             difference: amountDiff,
             details: `Invoice amount mismatch. Purchase: Rs ${purchase.totalAmount.toFixed(2)}, GSTR2B: Rs ${gstr2bMatch.totalAmount.toFixed(2)}, Diff: Rs ${amountDiff.toFixed(2)}`
           });
@@ -94,6 +125,18 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
             reason: 'tax_mismatch',
             purchaseAmount: purchase.totalAmount,
             gstr2bAmount: gstr2bMatch.totalAmount,
+            purchaseTaxDetails: {
+              igst: purchase.igst || 0,
+              cgst: purchase.cgst || 0,
+              sgst: purchase.sgst || 0,
+              cess: purchase.cess || 0
+            },
+            gstr2bTaxDetails: {
+              igst: gstr2bMatch.igst || 0,
+              cgst: gstr2bMatch.cgst || 0,
+              sgst: gstr2bMatch.sgst || 0,
+              cess: gstr2bMatch.cess || 0
+            },
             difference: taxDiff,
             details: `Tax amount mismatch. Total tax diff: Rs ${taxDiff.toFixed(2)}`
           });
@@ -112,6 +155,13 @@ export const reconcileRecords = async (purchaseUploadId, gstr2bUploadId, userId,
         reason: 'missing_in_purchase',
         purchaseAmount: null,
         gstr2bAmount: gstr2bRec.totalAmount,
+        purchaseTaxDetails: null,
+        gstr2bTaxDetails: {
+          igst: gstr2bRec.igst || 0,
+          cgst: gstr2bRec.cgst || 0,
+          sgst: gstr2bRec.sgst || 0,
+          cess: gstr2bRec.cess || 0
+        },
         difference: gstr2bRec.totalAmount,
         details: `Invoice ${gstr2bRec.invoiceNumber} exists in GSTR2B but not in Purchase records`
       });

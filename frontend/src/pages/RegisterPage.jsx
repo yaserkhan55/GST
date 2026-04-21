@@ -3,160 +3,161 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, DocumentCheckIcon } from '@heroicons/react/24/outline';
-
-const roles = [
-  { value: 'client', label: '🏢 Client' },
-  { value: 'officer', label: '🛡️ Officer' },
-  { value: 'admin', label: '⚡ Admin' }
-];
+import { UserPlusIcon, EnvelopeIcon, LockClosedIcon, BuildingOfficeIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
 export default function RegisterPage() {
   const { register, isLoading } = useAuthStore();
   const navigate = useNavigate();
-  const [showPass, setShowPass] = useState(false);
-  const [form, setForm] = useState({
-    name: '', email: '', password: '', confirmPassword: '',
-    role: 'client', company: '', gstin: ''
-  });
-
-  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'client', company: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      toast.error('Passwords do not match');
+    if (!form.name || !form.email || !form.password) {
+      toast.error('Please fill in all required fields');
       return;
     }
-    if (form.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    const result = await register({
-      name: form.name, email: form.email, password: form.password,
-      role: form.role, company: form.company, gstin: form.gstin
-    });
+    const result = await register(form);
     if (result.success) {
-      toast.success(`Account created! Welcome, ${result.user.name}!`);
-      const redirect = result.user.role === 'admin' ? '/admin' : result.user.role === 'officer' ? '/officer' : '/client';
-      navigate(redirect);
+      toast.success('Registration successful. Please login.');
+      navigate('/login');
     } else {
       toast.error(result.message);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 bg-mesh-light dark:bg-mesh-dark p-4 relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-400/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-mesh-light dark:bg-mesh-dark relative overflow-hidden font-sans">
+      {/* Decorative Blobs */}
+      <div className="absolute top-[-5%] left-[-5%] w-[35%] h-[35%] bg-brand-500/10 rounded-full blur-[80px]" />
+      <div className="absolute bottom-[-5%] right-[-5%] w-[35%] h-[35%] bg-emerald-500/10 rounded-full blur-[80px]" />
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-lg relative z-10"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-4xl glass-dark p-1 rounded-[3rem] shadow-2xl relative z-10 border-white/10"
       >
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-brand rounded-2xl mb-4 shadow-glow">
-            <DocumentCheckIcon className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-display font-bold text-slate-900 dark:text-white">Create Account</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Join GST Reconciliation System Pro</p>
-        </div>
-
-        <div className="card p-7">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Role selector */}
+        <div className="grid md:grid-cols-5 gap-0">
+          {/* Info Side */}
+          <div className="md:col-span-2 p-10 bg-gradient-to-br from-brand-600 to-indigo-700 rounded-[2.5rem] flex flex-col justify-between text-white m-2">
             <div>
-              <label className="label">Account Role</label>
-              <div className="grid grid-cols-3 gap-2">
-                {roles.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, role: r.value }))}
-                    className={`p-3 rounded-xl border text-sm font-medium transition-all duration-200 ${
-                      form.role === r.value
-                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 shadow-glow-sm'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-brand-300'
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8">
+                <UserPlusIcon className="w-6 h-6" />
               </div>
+              <h2 className="font-display text-4xl font-extrabold leading-tight mb-6">Join the Future of Taxation</h2>
+              <p className="text-brand-100 font-medium leading-relaxed">
+                Experience automated GSTR2B reconciliation with enterprise-grade security and modern analytics.
+              </p>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Full Name</label>
-                <input type="text" className="input" placeholder="John Doe" value={form.name} onChange={set('name')} required />
-              </div>
-              <div>
-                <label className="label">Email</label>
-                <input type="email" className="input" placeholder="you@company.com" value={form.email} onChange={set('email')} required />
-              </div>
+            
+            <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">99.9% Match Accuracy</span>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">Zero Data Leakage Policy</span>
+               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    className="input pr-10"
-                    placeholder="Min. 6 characters"
-                    value={form.password}
-                    onChange={set('password')}
-                    required
-                  />
-                  <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    {showPass ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                  </button>
+          {/* Form Side */}
+          <div className="md:col-span-3 p-10">
+            <h1 className="font-display text-3xl font-extrabold text-white mb-2">Create Profile</h1>
+            <p className="text-slate-400 font-medium mb-10">Register your entity on the platform</p>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-300 ml-1">Full Name</label>
+                  <div className="relative group">
+                    <UserCircleIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
+                    <input
+                      type="text"
+                      className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all text-sm"
+                      placeholder="John Doe"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-300 ml-1">Email Address</label>
+                  <div className="relative group">
+                    <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
+                    <input
+                      type="email"
+                      className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all text-sm"
+                      placeholder="john@example.com"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="label">Confirm Password</label>
-                <input type="password" className="input" placeholder="Repeat password" value={form.confirmPassword} onChange={set('confirmPassword')} required />
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-300 ml-1">Password</label>
+                <div className="relative group">
+                  <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
+                  <input
+                    type="password"
+                    className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all text-sm"
+                    placeholder="Min. 8 characters"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="label">Company Name <span className="text-slate-400 font-normal">(optional)</span></label>
-              <input type="text" className="input" placeholder="ABC Traders Pvt Ltd" value={form.company} onChange={set('company')} />
-            </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-300 ml-1">Company (Optional)</label>
+                  <div className="relative group">
+                    <BuildingOfficeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
+                    <input
+                      type="text"
+                      className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all text-sm"
+                      placeholder="Global Inc."
+                      value={form.company}
+                      onChange={(e) => setForm({ ...form, company: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="label">GSTIN <span className="text-slate-400 font-normal">(optional)</span></label>
-              <input
-                type="text"
-                className="input font-mono uppercase"
-                placeholder="27AABCU9603R1ZX"
-                value={form.gstin}
-                onChange={set('gstin')}
-                maxLength={15}
-              />
-            </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-300 ml-1">Account Role</label>
+                  <select
+                    className="w-full px-4 py-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all text-sm appearance-none cursor-pointer"
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  >
+                    <option value="client">Taxpayer / Client</option>
+                    <option value="officer">Assessment Officer</option>
+                  </select>
+                </div>
+              </div>
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full py-3 mt-2">
-              {isLoading ? (
-                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-                  <path d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" fill="currentColor" className="opacity-75" />
-                </svg>
-              ) : null}
-              {isLoading ? 'Creating account...' : 'Create Account'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-4 rounded-2xl bg-gradient-brand text-white font-bold text-lg shadow-xl shadow-brand-500/30 active:scale-[0.98] transition-all hover:scale-[1.01] disabled:opacity-50 mt-4"
+              >
+                {isLoading ? 'Creating Account...' : 'Initialize Profile'}
+              </button>
+            </form>
 
-          <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">
-            Already have an account?{' '}
-            <Link to="/login" className="text-brand-600 dark:text-brand-400 font-semibold hover:underline">Sign in</Link>
-          </p>
+            <p className="mt-8 text-center text-slate-500 font-medium">
+              Already have an account?{' '}
+              <Link to="/login" className="text-brand-500 hover:text-brand-400 font-bold underline underline-offset-4">
+                Login here
+              </Link>
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

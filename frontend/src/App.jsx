@@ -9,6 +9,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import OfficerDashboard from './pages/OfficerDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   const { isAuthenticated, initAuth, user } = useAuthStore();
@@ -35,14 +36,23 @@ function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            borderRadius: '12px',
-            padding: '12px 16px',
+            borderRadius: '16px', // Restored rounded corners
+            padding: '16px 20px',
             fontSize: '14px',
-            fontWeight: '500',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+            fontWeight: '600',
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: isDark ? '#1e293b' : '#ffffff',
+            color: isDark ? '#f8fafc' : '#1e293b'
           },
-          success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
-          error:   { iconTheme: { primary: '#ef4444', secondary: '#fff' } }
+          success: {
+            iconTheme: { primary: '#10b981', secondary: '#fff' },
+            style: { borderLeft: '4px solid #10b981' }
+          },
+          error: {
+            iconTheme: { primary: '#f43f5e', secondary: '#fff' },
+            style: { borderLeft: '4px solid #f43f5e' }
+          }
         }}
       />
 
@@ -72,7 +82,14 @@ function App() {
           </Route>
         </Route>
 
-        {/* Default redirect */}
+        {/* Protected - Profile */}
+        <Route element={<ProtectedRoute roles={['client', 'admin', 'officer']} />}>
+          <Route element={<Layout />}>
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+        </Route>
+
+        {/* Default redirectStatus */}
         <Route path="/" element={isAuthenticated ? <Navigate to={getDashboard()} replace /> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

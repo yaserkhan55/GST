@@ -53,6 +53,19 @@ export const useAuthStore = create(
         }
       },
 
+      updateProfile: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await api.put('/auth/me', data);
+          set({ user: res.data.user, isLoading: false });
+          return { success: true, user: res.data.user };
+        } catch (err) {
+          const message = err.response?.data?.message || 'Profile update failed.';
+          set({ isLoading: false, error: message });
+          return { success: false, message };
+        }
+      },
+
       clearError: () => set({ error: null })
     }),
     {
