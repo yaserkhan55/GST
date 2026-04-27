@@ -26,7 +26,12 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', process.env.FRONTEND_URL].filter(Boolean),
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:3000', 
+    'https://gst-cyan.vercel.app',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -40,6 +45,12 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// API Route safeguards - handles common deployment misconfigurations
+app.use(['/auth/login', '/auth/register', '/auth/me'], (req, res) => {
+  console.log(`[Server] Redirecting missing /api prefix for: ${req.originalUrl}`);
+  res.redirect(307, `/api${req.originalUrl}`);
+});
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({

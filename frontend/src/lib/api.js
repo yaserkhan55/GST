@@ -1,7 +1,19 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl || envUrl === '/api') return '/api';
+  
+  // If the URL is external and doesn't end with /api, append it
+  if (envUrl.startsWith('http') && !envUrl.endsWith('/api')) {
+    return `${envUrl.replace(/\/$/, '')}/api`;
+  }
+  
+  return envUrl;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: getBaseURL(),
   timeout: 30000
 });
 
